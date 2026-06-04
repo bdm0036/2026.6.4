@@ -1,0 +1,382 @@
+# =============================================
+# 网关服务 Service + Deployment
+# =============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: bookstore
+spec:
+  type: NodePort
+  selector:
+    app: bookstore-gateway
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-gateway
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-gateway
+  template:
+    metadata:
+      labels:
+        app: bookstore-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: registry.local/bookstore-system-gateway:IMAGE_TAG
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_CLOUD_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: consul-host
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+---
+# =============================================
+# 认证服务 Service + Deployment
+# =============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-auth
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-auth
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-auth
+  template:
+    metadata:
+      labels:
+        app: bookstore-auth
+    spec:
+      containers:
+        - name: auth
+          image: registry.local/bookstore-system-auth:IMAGE_TAG
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_CLOUD_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: consul-host
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://$(MYSQL_HOST):$(MYSQL_PORT)/bookstore_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-host
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-port
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-root-password
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: redis-host
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+# =============================================
+# 用户服务 Service + Deployment
+# =============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-user
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-user
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-user
+  template:
+    metadata:
+      labels:
+        app: bookstore-user
+    spec:
+      containers:
+        - name: user
+          image: registry.local/bookstore-system-user:IMAGE_TAG
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_CLOUD_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: consul-host
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://$(MYSQL_HOST):$(MYSQL_PORT)/bookstore_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-host
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-port
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-root-password
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+# =============================================
+# 商品服务 Service + Deployment
+# =============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-product
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-product
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-product
+  template:
+    metadata:
+      labels:
+        app: bookstore-product
+    spec:
+      containers:
+        - name: product
+          image: registry.local/bookstore-system-product:IMAGE_TAG
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_CLOUD_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: consul-host
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://$(MYSQL_HOST):$(MYSQL_PORT)/bookstore_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-host
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-port
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-root-password
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: redis-host
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+# =============================================
+# 订单服务 Service + Deployment
+# =============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-order
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-order
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-order
+  template:
+    metadata:
+      labels:
+        app: bookstore-order
+    spec:
+      containers:
+        - name: order
+          image: registry.local/bookstore-system-order:IMAGE_TAG
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_CLOUD_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: consul-host
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://$(MYSQL_HOST):$(MYSQL_PORT)/bookstore_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+            - name: MYSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-host
+            - name: MYSQL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: bookstore-config
+                  key: mysql-port
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstore-secrets
+                  key: mysql-root-password
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+---
+# =============================================
+# 前端 Service + Deployment
+# =============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: bookstore
+spec:
+  type: NodePort
+  selector:
+    app: bookstore-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-frontend
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-frontend
+  template:
+    metadata:
+      labels:
+        app: bookstore-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: registry.local/bookstore-system-frontend:IMAGE_TAG
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "200m"

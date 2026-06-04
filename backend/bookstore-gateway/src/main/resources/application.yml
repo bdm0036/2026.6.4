@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    web-application-type: reactive
+  application:
+    name: bookstore-gateway
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+        instance-id: ${spring.application.name}:${server.port}
+        health-check-path: /actuator/health
+        health-check-interval: 10s
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # 认证服务路由
+        - id: auth-service
+          uri: lb://bookstore-auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+        # 用户服务路由
+        - id: user-service
+          uri: lb://bookstore-user-service
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=0
+        # 商品服务路由
+        - id: product-service
+          uri: lb://bookstore-product-service
+          predicates:
+            - Path=/api/product/**
+          filters:
+            - StripPrefix=0
+        # 订单服务路由
+        - id: order-service
+          uri: lb://bookstore-order-service
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - StripPrefix=0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.bookstore.gateway: debug

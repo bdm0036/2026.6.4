@@ -1,0 +1,193 @@
+version: '3.8'
+
+# =============================================
+# 网上书店微服务系统 - Docker Compose本地开发环境
+# =============================================
+
+services:
+  # Consul 服务注册与发现
+  consul:
+    image: consul:1.15
+    container_name: bookstore-consul
+    ports:
+      - "8500:8500"
+    command: agent -dev -client=0.0.0.0
+    volumes:
+      - consul-data:/consul/data
+    networks:
+      - bookstore-net
+
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: bookstore-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - bookstore-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: bookstore-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - bookstore-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../backend
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE_NAME: bookstore-auth-service
+    container_name: bookstore-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bookstore_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - bookstore-net
+
+  # User Service
+  user-service:
+    build:
+      context: ../backend
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE_NAME: bookstore-user-service
+    container_name: bookstore-user-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bookstore_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
+    networks:
+      - bookstore-net
+
+  # Product Service
+  product-service:
+    build:
+      context: ../backend
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE_NAME: bookstore-product-service
+    container_name: bookstore-product-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bookstore_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - bookstore-net
+
+  # Order Service
+  order-service:
+    build:
+      context: ../backend
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE_NAME: bookstore-order-service
+    container_name: bookstore-order-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bookstore_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
+    networks:
+      - bookstore-net
+
+  # Gateway Service
+  gateway-service:
+    build:
+      context: ../backend
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE_NAME: bookstore-gateway
+    container_name: bookstore-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_CLOUD_CONSUL_HOST=consul
+    depends_on:
+      consul:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    networks:
+      - bookstore-net
+
+  # Vue Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: docker/Dockerfile
+    container_name: bookstore-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway-service
+    networks:
+      - bookstore-net
+
+volumes:
+  mysql-data:
+  redis-data:
+  consul-data:
+
+networks:
+  bookstore-net:
+    driver: bridge

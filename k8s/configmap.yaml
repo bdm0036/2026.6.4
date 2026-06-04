@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bookstore-config
+  namespace: bookstore
+data:
+  consul-host: "consul-service.default.svc.cluster.local"
+  mysql-host: "mysql-service.default.svc.cluster.local"
+  redis-host: "redis-service.default.svc.cluster.local"
+  mysql-port: "3306"
+  redis-port: "6379"
+  consul-port: "8500"

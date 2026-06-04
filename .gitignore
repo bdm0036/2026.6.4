@@ -1,0 +1,23 @@
+# ============ IDE ============
+.idea/
+*.iml
+.vscode/
+
+# ============ Java 编译产物 ============
+target/
+*.class
+*.jar
+!*.jar.original
+
+# ============ Node 依赖 ============
+node_modules/
+dist/
+
+# ============ Docker 数据卷（运行产生的数据，不是代码）============
+docker-compose.override.yml
+
+# ============ 临时文件 ============
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
