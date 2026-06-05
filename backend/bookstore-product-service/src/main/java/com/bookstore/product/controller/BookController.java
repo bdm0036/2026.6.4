@@ -4,11 +4,15 @@ import com.bookstore.common.dto.PageDTO;
 import com.bookstore.common.entity.Result;
 import com.bookstore.product.entity.Book;
 import com.bookstore.product.service.BookService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "图书管理", description = "图书的查询、新增、修改、下架接口")
 @RestController
 @RequestMapping("/api/product")
 @RequiredArgsConstructor
@@ -16,6 +20,7 @@ public class BookController {
 
     private final BookService bookService;
 
+    @Operation(summary = "图书列表", description = "分页查询图书，支持关键词搜索和分类筛选")
     @GetMapping("/books")
     public Result<PageDTO<Book>> listBooks(
             @RequestParam(defaultValue = "1") Integer page,

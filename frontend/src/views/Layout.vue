@@ -9,6 +9,7 @@
         <nav class="nav">
           <router-link to="/home">首页</router-link>
           <router-link to="/books">图书</router-link>
+          <router-link to="/favorites" v-if="userStore.isLoggedIn()">收藏</router-link>
         </nav>
         <div class="header-actions">
           <router-link to="/cart" class="cart-btn">
@@ -30,6 +31,7 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item @click="$router.push('/orders')">我的订单</el-dropdown-item>
+                  <el-dropdown-item @click="$router.push('/favorites')">我的收藏</el-dropdown-item>
                   <el-dropdown-item @click="$router.push('/profile')">个人中心</el-dropdown-item>
                   <el-dropdown-item v-if="userStore.isAdmin()" divided @click="$router.push('/admin/dashboard')">管理后台</el-dropdown-item>
                   <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>

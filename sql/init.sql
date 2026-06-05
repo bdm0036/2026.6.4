@@ -79,6 +79,40 @@ CREATE TABLE tb_book (
     INDEX idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='图书表';
 
+DROP TABLE IF EXISTS tb_rating;
+CREATE TABLE tb_rating (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    book_id BIGINT NOT NULL COMMENT '图书ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    score TINYINT NOT NULL COMMENT '评分 1-5',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY uk_book_user (book_id, user_id),
+    INDEX idx_book_id (book_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='图书评分表';
+
+DROP TABLE IF EXISTS tb_review;
+CREATE TABLE tb_review (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    book_id BIGINT NOT NULL COMMENT '图书ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    username VARCHAR(50) DEFAULT NULL COMMENT '用户名',
+    content TEXT NOT NULL COMMENT '评论内容',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_book_id (book_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='图书评论表';
+
+DROP TABLE IF EXISTS tb_favorite;
+CREATE TABLE tb_favorite (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    book_id BIGINT NOT NULL COMMENT '图书ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY uk_book_user (book_id, user_id),
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户收藏表';
+
 -- 插入分类数据
 INSERT INTO tb_category (name, description, sort_order) VALUES
 ('文学小说', '古今中外文学名著、现代小说', 1),
@@ -100,7 +134,7 @@ INSERT INTO tb_book (title, author, isbn, publisher, publish_date, price, stock,
 ('三体', '刘慈欣', '978-7-5366-9293-0', '重庆出版社', '2008-01-01', 39.00, 120, '中国科幻文学的里程碑之作，讲述地球文明与三体文明的接触', 1, 1),
 ('设计模式', 'GoF', '978-7-111-07575-0', '机械工业出版社', '2004-09-01', 69.00, 20, '面向对象设计的经典之作，23种设计模式的权威指南', 2, 1),
 ('思考，快与慢', '丹尼尔·卡尼曼', '978-7-5086-3355-8', '中信出版社', '2012-07-01', 69.00, 45, '诺贝尔经济学奖得主关于人类认知与决策的研究', 3, 1),
-('时间简史', '史蒂芬·霍金', '978-7-5357-4738-6', '湖南科技出版社', '2010-04-01', 45.00, 35, '霍金关于宇宙学的科普经典之作', 5, 1),
+('时间简史', '史蒂芬·霍金', '978-7-5357-4738-6', '湖南科技出版社', '2010-04-01', 45.00, 35, '霍金关于宇宙学的经典科普之作', 5, 1),
 ('Java并发编程艺术', '方腾飞', '978-7-111-50824-3', '机械工业出版社', '2015-07-01', 79.00, 30, '深入剖析Java并发编程的底层实现原理', 2, 1);
 
 -- =============================================

@@ -36,6 +36,10 @@
           <div class="book-info">
             <h3>{{ book.title }}</h3>
             <p class="book-author">{{ book.author }}</p>
+            <div class="book-rating" v-if="book.avgRating">
+              <el-rate v-model="book.avgRating" disabled size="small" :colors="['#f59e0b','#f59e0b','#f59e0b']" />
+              <span class="rating-num">{{ book.avgRating }}</span>
+            </div>
             <div class="book-bottom">
               <span class="book-price">¥{{ book.price }}</span>
               <el-button size="small" type="primary" circle @click.stop="addToCart(book)">
@@ -239,4 +243,6 @@ function addToCart(book) {
   font-size: 0.9rem;
   font-weight: 500;
 }
+.book-rating { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.rating-num { font-size: 0.8rem; color: #f59e0b; font-weight: 600; }
 </style>

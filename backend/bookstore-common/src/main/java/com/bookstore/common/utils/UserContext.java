@@ -11,6 +11,7 @@ public class UserContext {
 
     public static void setUserId(Long userId) { USER_ID.set(userId); }
     public static Long getUserId() { return USER_ID.get(); }
+    public static Long tryGetUserId() { return USER_ID.get(); }
 
     public static void setUsername(String username) { USERNAME.set(username); }
     public static String getUsername() { return USERNAME.get(); }

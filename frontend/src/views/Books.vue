@@ -24,6 +24,10 @@
           <h3>{{ book.title }}</h3>
           <p class="book-author">{{ book.author }}</p>
           <p class="book-category" v-if="book.categoryName">{{ book.categoryName }}</p>
+          <div class="book-rating" v-if="book.avgRating">
+            <el-rate v-model="book.avgRating" disabled size="small" :colors="['#f59e0b','#f59e0b','#f59e0b']" />
+            <span class="rating-num">{{ book.avgRating }}</span>
+          </div>
           <div class="book-bottom">
             <span class="book-price">¥{{ book.price }}</span>
             <span class="book-stock">库存: {{ book.stock }}</span>
@@ -152,6 +156,8 @@ function doSearch() {
 }
 .book-author { margin-top: 4px; font-size: 0.8rem; color: #8c8ca1; }
 .book-category { margin-top: 2px; font-size: 0.78rem; color: #4f46e5; }
+.book-rating { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.rating-num { font-size: 0.8rem; color: #f59e0b; font-weight: 600; }
 .book-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 .book-price { font-size: 1.1rem; font-weight: 700; color: #e74c3c; }
 .book-stock { font-size: 0.78rem; color: #8c8ca1; }

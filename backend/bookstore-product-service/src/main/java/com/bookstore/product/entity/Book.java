@@ -28,4 +28,14 @@ public class Book {
     private LocalDateTime updateTime;
     @TableField(exist = false)
     private String categoryName;
+    @TableField(exist = false)
+    private Double avgRating;
+    @TableField(exist = false)
+    private Integer ratingCount;
+    @TableField(exist = false)
+    private Integer userRating;
+    @TableField(exist = false)
+    private Integer favoriteCount;
+    @TableField(exist = false)
+    private Boolean favorited;
 }

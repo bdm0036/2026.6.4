@@ -28,20 +28,45 @@ import java.util.List;
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
 
-    private static final List<String> WHITE_LIST = List.of(
+    // 白名单：GET请求的公开路径（精确匹配或特定前缀）
+    private static final List<String> WHITE_LIST_GET = List.of(
             "/api/auth/login",
             "/api/auth/register",
-            "/api/product/books",
-            "/api/product/categories"
+            "/api/product/books",     // 图书列表
+            "/api/product/categories", // 分类列表
+            "/api/product/books/rating", // 评分查询
+            "/api/product/books/reviews", // 评论查询
+            "/api/product/books/favorite" // 收藏状态查询
+    );
+
+    private static final List<String> WHITE_LIST_PREFIX = List.of(
+            "/api/product/books/"  // 图书详情 GET /api/product/books/{id}
     );
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
+        String method = request.getMethod() != null ? request.getMethod().name() : "GET";
 
-        // 白名单路径直接放行
-        if (isWhitePath(path)) {
+        // 白名单路径直接放行（不校验Token，但GET请求可能需要用户信息用于获取个人评分/收藏状态）
+        if (isWhitePath(path, method)) {
+            // 尝试从Token获取用户信息（即使白名单也尽可能传递）
+            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    if (JwtUtil.validateToken(token)) {
+                        Claims claims = JwtUtil.parseToken(token);
+                        ServerHttpRequest modifiedRequest = request.mutate()
+                                .header("X-User-Id", String.valueOf(claims.get("userId", Long.class)))
+                                .header("X-Username", claims.getSubject())
+                                .header("X-Role", claims.get("role", String.class))
+                                .build();
+                        return chain.filter(exchange.mutate().request(modifiedRequest).build());
+                    }
+                } catch (Exception ignored) {}
+            }
             return chain.filter(exchange);
         }
 
@@ -75,8 +100,23 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
     }
 
-    private boolean isWhitePath(String path) {
-        return WHITE_LIST.stream().anyMatch(path::startsWith);
+    private boolean isWhitePath(String path, String method) {
+        // 登录注册始终放行
+        if (path.equals("/api/auth/login") || path.equals("/api/auth/register")) {
+            return true;
+        }
+        // GET请求的公开路径
+        if ("GET".equalsIgnoreCase(method)) {
+            // 精确匹配
+            if (WHITE_LIST_GET.stream().anyMatch(path::equals)) {
+                return true;
+            }
+            // /api/product/books/{id} 及其子资源的GET请求
+            if (path.matches("^/api/product/books/\\d+(/rating|/reviews|/favorite)?$")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Mono<Void> unauthorizedResponse(ServerWebExchange exchange, String message) {

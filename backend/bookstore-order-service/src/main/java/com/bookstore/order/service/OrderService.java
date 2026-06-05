@@ -19,6 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,6 +39,32 @@ public class OrderService {
     private final OrderItemMapper orderItemMapper;
     private final RestTemplate restTemplate;
 
+    /**
+     * 调用商品服务获取图书信息（带熔断和重试保护）
+     */
+    @CircuitBreaker(name = "productService", fallbackMethod = "getBookInfoFallback")
+    @Retry(name = "productService")
+    private Map<String, Object> getBookInfo(Long bookId) {
+        String url = "http://bookstore-product-service/api/product/books/" + bookId;
+        ResponseEntity<Result<Map<String, Object>>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Result<Map<String, Object>>>() {}
+        );
+        Result<Map<String, Object>> result = response.getBody();
+        if (result == null || result.getCode() != 200 || result.getData() == null) {
+            throw new BusinessException("获取图书信息失败");
+        }
+        return result.getData();
+    }
+
+    /** 熔断降级：返回缓存的价格（实际可用Redis缓存） */
+    private Map<String, Object> getBookInfoFallback(Long bookId, Throwable t) {
+        log.error("商品服务熔断降级: bookId={}, error={}", bookId, t.getMessage());
+        throw new BusinessException("商品服务暂时不可用，已触发熔断保护，请稍后重试");
+    }
+
     @Transactional
     public Order createOrder(CreateOrderDTO createOrderDTO) {
         Long userId = UserContext.getUserId();
@@ -47,23 +76,11 @@ public class OrderService {
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
 
-        // 通过RestTemplate调用商品服务获取图书信息
+        // 通过RestTemplate调用商品服务获取图书信息（带熔断+重试）
         for (CreateOrderDTO.OrderItemDTO itemDTO : createOrderDTO.getItems()) {
             try {
-                String url = "http://bookstore-product-service/api/product/books/" + itemDTO.getBookId();
-                ResponseEntity<Result<Map<String, Object>>> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        null,
-                        new ParameterizedTypeReference<Result<Map<String, Object>>>() {}
-                );
+                Map<String, Object> bookData = getBookInfo(itemDTO.getBookId());
 
-                Result<Map<String, Object>> result = response.getBody();
-                if (result == null || result.getCode() != 200 || result.getData() == null) {
-                    throw new BusinessException("获取图书信息失败");
-                }
-
-                Map<String, Object> bookData = result.getData();
                 BigDecimal price = new BigDecimal(bookData.get("price").toString());
                 String title = (String) bookData.get("title");
                 String coverImage = (String) bookData.get("coverImage");

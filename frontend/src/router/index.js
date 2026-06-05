@@ -11,6 +11,7 @@ const routes = [
       { path: 'book/:id', name: 'BookDetail', component: () => import('../views/BookDetail.vue'), meta: { title: '图书详情' } },
       { path: 'cart', name: 'Cart', component: () => import('../views/Cart.vue'), meta: { title: '购物车' } },
       { path: 'orders', name: 'Orders', component: () => import('../views/Orders.vue'), meta: { title: '我的订单' } },
+      { path: 'favorites', name: 'Favorites', component: () => import('../views/Favorites.vue'), meta: { title: '我的收藏' } },
       { path: 'profile', name: 'Profile', component: () => import('../views/Profile.vue'), meta: { title: '个人中心' } },
     ],
   },

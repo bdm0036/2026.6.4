@@ -34,6 +34,26 @@ export const categoryAPI = {
   delete: (id) => request.delete(`/product/categories/${id}`),
 }
 
+// 评分API
+export const ratingAPI = {
+  getRating: (bookId) => request.get(`/product/books/${bookId}/rating`),
+  rate: (bookId, score) => request.post(`/product/books/${bookId}/rating`, null, { params: { score } }),
+}
+
+// 评论API
+export const reviewAPI = {
+  list: (bookId, params) => request.get(`/product/books/${bookId}/reviews`, { params }),
+  add: (bookId, content) => request.post(`/product/books/${bookId}/reviews`, null, { params: { content } }),
+  delete: (bookId, id) => request.delete(`/product/books/${bookId}/reviews/${id}`),
+}
+
+// 收藏API
+export const favoriteAPI = {
+  toggle: (bookId) => request.post(`/product/books/${bookId}/favorite`),
+  check: (bookId) => request.get(`/product/books/${bookId}/favorite`),
+  list: (params) => request.get('/product/favorites', { params }),
+}
+
 // 订单API
 export const orderAPI = {
   create: (data) => request.post('/order', data),
