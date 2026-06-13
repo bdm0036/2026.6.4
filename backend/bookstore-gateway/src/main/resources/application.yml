@@ -49,6 +49,20 @@ spring:
             - Path=/api/order/**
           filters:
             - StripPrefix=0
+        # 优惠券路由（在订单服务中）
+        - id: coupon-service
+          uri: lb://bookstore-order-service
+          predicates:
+            - Path=/api/coupon/**
+          filters:
+            - StripPrefix=0
+        # 支付路由（在订单服务中）
+        - id: payment-service
+          uri: lb://bookstore-order-service
+          predicates:
+            - Path=/api/pay/**
+          filters:
+            - StripPrefix=0
 
 management:
   endpoints:

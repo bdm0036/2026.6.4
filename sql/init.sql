@@ -175,3 +175,93 @@ CREATE TABLE tb_order_item (
     INDEX idx_order_id (order_id),
     INDEX idx_book_id (book_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单项表';
+
+-- =============================================
+-- Phase 2 表（收货地址、浏览历史、优惠券、支付、物流）
+-- =============================================
+
+-- bookstore_user.tb_address
+DROP TABLE IF EXISTS bookstore_user.tb_address;
+CREATE TABLE bookstore_user.tb_address (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    receiver_name VARCHAR(50),
+    receiver_phone VARCHAR(20),
+    province VARCHAR(50),
+    city VARCHAR(50),
+    district VARCHAR(50),
+    detail VARCHAR(200),
+    is_default INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='收货地址表';
+
+-- bookstore_user.tb_browse_history
+DROP TABLE IF EXISTS bookstore_user.tb_browse_history;
+CREATE TABLE bookstore_user.tb_browse_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    book_id BIGINT NOT NULL,
+    browse_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_book_id (book_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浏览历史表';
+
+-- bookstore_order.tb_coupon
+DROP TABLE IF EXISTS bookstore_order.tb_coupon;
+CREATE TABLE bookstore_order.tb_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    type VARCHAR(50),
+    threshold DECIMAL(10,2),
+    discount DECIMAL(10,2),
+    total INT,
+    claimed INT DEFAULT 0,
+    valid_days INT,
+    status INT DEFAULT 1,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='优惠券表';
+
+-- bookstore_order.tb_user_coupon
+DROP TABLE IF EXISTS bookstore_order.tb_user_coupon;
+CREATE TABLE bookstore_order.tb_user_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT,
+    coupon_id BIGINT,
+    status VARCHAR(20) DEFAULT 'UNUSED',
+    claim_time DATETIME,
+    use_time DATETIME,
+    order_id BIGINT,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户优惠券表';
+
+-- bookstore_order.tb_payment_log
+DROP TABLE IF EXISTS bookstore_order.tb_payment_log;
+CREATE TABLE bookstore_order.tb_payment_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT,
+    order_no VARCHAR(50),
+    amount DECIMAL(10,2),
+    channel VARCHAR(50),
+    trade_no VARCHAR(100),
+    status VARCHAR(20),
+    pay_time DATETIME,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_order_id (order_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='支付日志表';
+
+-- bookstore_order.tb_shipment
+DROP TABLE IF EXISTS bookstore_order.tb_shipment;
+CREATE TABLE bookstore_order.tb_shipment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT,
+    order_no VARCHAR(50),
+    company VARCHAR(100),
+    tracking_no VARCHAR(100),
+    status VARCHAR(50),
+    ship_time DATETIME,
+    sign_time DATETIME,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_order_id (order_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物流表';

@@ -10,6 +10,7 @@
           <router-link to="/home">首页</router-link>
           <router-link to="/books">图书</router-link>
           <router-link to="/favorites" v-if="userStore.isLoggedIn()">收藏</router-link>
+          <router-link to="/coupons" v-if="userStore.isLoggedIn()">优惠券</router-link>
         </nav>
         <div class="header-actions">
           <router-link to="/cart" class="cart-btn">

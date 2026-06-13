@@ -11,8 +11,8 @@ import com.bookstore.product.mapper.FavoriteMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class BookService {
 
     private final BookMapper bookMapper;
@@ -32,49 +31,58 @@ public class BookService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
 
+    public BookService(BookMapper bookMapper, CategoryMapper categoryMapper,
+                       RatingMapper ratingMapper, FavoriteMapper favoriteMapper,
+                       @Autowired(required = false) RedisTemplate<String, Object> redisTemplate,
+                       ObjectMapper objectMapper) {
+        this.bookMapper = bookMapper;
+        this.categoryMapper = categoryMapper;
+        this.ratingMapper = ratingMapper;
+        this.favoriteMapper = favoriteMapper;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+    }
+
     private static final String BOOK_CACHE_KEY = "book:";
     private static final String BOOK_LIST_CACHE_KEY = "book:list:";
     private static final String HOT_BOOKS_CACHE_KEY = "book:hot";
-    private static final String NULL_VALUE = "__NULL__"; // 防缓存穿透
+    private static final String NULL_VALUE = "__NULL__";
+
+    private boolean hasRedis() { return redisTemplate != null; }
 
     public Book getById(Long id) {
         String cacheKey = BOOK_CACHE_KEY + id;
-        Object cached = redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            if (NULL_VALUE.equals(cached)) {
-                throw new BusinessException(404, "图书不存在");
+        if (hasRedis()) {
+            Object cached = redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
+                if (NULL_VALUE.equals(cached)) throw new BusinessException(404, "图书不存在");
+                return objectMapper.convertValue(cached, Book.class);
             }
-            log.debug("从缓存获取图书: {}", id);
-            return objectMapper.convertValue(cached, Book.class);
         }
 
         Book book = bookMapper.selectById(id);
         if (book == null) {
-            // 防缓存穿透：缓存空值，短期过期
-            redisTemplate.opsForValue().set(cacheKey, NULL_VALUE, 60, TimeUnit.SECONDS);
+            if (hasRedis()) redisTemplate.opsForValue().set(cacheKey, NULL_VALUE, 60, TimeUnit.SECONDS);
             throw new BusinessException(404, "图书不存在");
         }
 
         if (book.getCategoryId() != null) {
             Category category = categoryMapper.selectById(book.getCategoryId());
-            if (category != null) {
-                book.setCategoryName(category.getName());
-            }
+            if (category != null) book.setCategoryName(category.getName());
         }
 
         enrichBook(book);
-        redisTemplate.opsForValue().set(cacheKey, book, 1, TimeUnit.HOURS);
+        if (hasRedis()) redisTemplate.opsForValue().set(cacheKey, book, 1, TimeUnit.HOURS);
         return book;
     }
 
     public PageDTO<Book> listBooks(Integer page, Integer size, String keyword, Long categoryId) {
         // 无搜索条件时使用缓存
-        boolean canCache = !StringUtils.hasText(keyword) && (categoryId == null || categoryId <= 0);
+        boolean canCache = hasRedis() && !StringUtils.hasText(keyword) && (categoryId == null || categoryId <= 0);
         if (canCache) {
             String cacheKey = BOOK_LIST_CACHE_KEY + page + ":" + size;
             Object cached = redisTemplate.opsForValue().get(cacheKey);
             if (cached != null) {
-                log.debug("从缓存获取图书列表: page={}, size={}", page, size);
                 return objectMapper.convertValue(cached, PageDTO.class);
             }
         }
@@ -117,21 +125,18 @@ public class BookService {
     }
 
     public List<Book> getHotBooks(int limit) {
-        // 热门图书缓存30分钟
-        String cacheKey = HOT_BOOKS_CACHE_KEY + ":" + limit;
-        Object cached = redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            log.debug("从缓存获取热门图书");
-            return objectMapper.convertValue(cached, List.class);
+        if (hasRedis()) {
+            String cacheKey = HOT_BOOKS_CACHE_KEY + ":" + limit;
+            Object cached = redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) return objectMapper.convertValue(cached, List.class);
         }
 
         LambdaQueryWrapper<Book> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Book::getStatus, 1)
-                .orderByDesc(Book::getCreateTime)
-                .last("LIMIT " + limit);
+        wrapper.eq(Book::getStatus, 1).orderByDesc(Book::getCreateTime).last("LIMIT " + limit);
         List<Book> books = bookMapper.selectList(wrapper);
 
-        redisTemplate.opsForValue().set(cacheKey, books, 30, TimeUnit.MINUTES);
+        if (hasRedis())
+            redisTemplate.opsForValue().set(HOT_BOOKS_CACHE_KEY + ":" + limit, books, 30, TimeUnit.MINUTES);
         return books;
     }
 
@@ -149,9 +154,7 @@ public class BookService {
         }
         book.setId(id);
         bookMapper.updateById(book);
-        // 清除相关缓存
-        redisTemplate.delete(BOOK_CACHE_KEY + id);
-        clearListCache();
+        if (hasRedis()) { redisTemplate.delete(BOOK_CACHE_KEY + id); clearListCache(); }
         log.info("更新图书: {}", id);
     }
 
@@ -162,16 +165,15 @@ public class BookService {
         }
         book.setStatus(0);
         bookMapper.updateById(book);
-        redisTemplate.delete(BOOK_CACHE_KEY + id);
-        clearListCache();
+        if (hasRedis()) { redisTemplate.delete(BOOK_CACHE_KEY + id); clearListCache(); }
         log.info("下架图书: {}", id);
     }
 
     /** 清除所有列表和热门缓存（写操作后调用） */
     private void clearListCache() {
+        if (!hasRedis()) return;
         redisTemplate.delete(redisTemplate.keys(BOOK_LIST_CACHE_KEY + "*"));
         redisTemplate.delete(redisTemplate.keys(HOT_BOOKS_CACHE_KEY + "*"));
-        log.debug("已清除图书列表和热门缓存");
     }
 
     private void enrichBook(Book book) {

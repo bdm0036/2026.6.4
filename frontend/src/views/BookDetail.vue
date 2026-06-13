@@ -94,7 +94,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { useUserStore } from '../stores/user'
-import { bookAPI, ratingAPI, reviewAPI, favoriteAPI } from '../api'
+import { bookAPI, ratingAPI, reviewAPI, favoriteAPI, historyAPI } from '../api'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -120,6 +120,7 @@ onMounted(async () => {
     ])
     book.value = bookRes.data
     if (book.value) {
+      historyAPI.record(id).catch(() => {})  // 记录浏览历史（静默）
       book.value.avgRating = ratingRes.data.avgRating || 0
       book.value.ratingCount = ratingRes.data.ratingCount || 0
       book.value.favorited = favRes.data.favorited

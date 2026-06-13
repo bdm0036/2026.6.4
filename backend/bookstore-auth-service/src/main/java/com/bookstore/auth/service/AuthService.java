@@ -7,8 +7,8 @@ import com.bookstore.common.dto.RegisterDTO;
 import com.bookstore.common.exception.BusinessException;
 import com.bookstore.common.utils.JwtUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -20,11 +20,18 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserMapper userMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+
+    public AuthService(UserMapper userMapper,
+                       @Autowired(required = false) RedisTemplate<String, Object> redisTemplate) {
+        this.userMapper = userMapper;
+        this.redisTemplate = redisTemplate;
+    }
+
+    private boolean hasRedis() { return redisTemplate != null; }
 
     public Map<String, Object> login(LoginDTO loginDTO) {
         String username = loginDTO.getUsername();
@@ -33,21 +40,14 @@ public class AuthService {
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>()
                         .eq(User::getUsername, username)
-                        .eq(User::getPassword, password)
-        );
+                        .eq(User::getPassword, password));
 
-        if (user == null) {
-            throw new BusinessException(401, "用户名或密码错误");
-        }
-
-        if (user.getStatus() == 0) {
-            throw new BusinessException(403, "账号已被禁用");
-        }
+        if (user == null) throw new BusinessException(401, "用户名或密码错误");
+        if (user.getStatus() == 0) throw new BusinessException(403, "账号已被禁用");
 
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
 
-        // 将Token存入Redis，设置24小时过期
-        redisTemplate.opsForValue().set("token:" + user.getId(), token, 24, TimeUnit.HOURS);
+        if (hasRedis()) redisTemplate.opsForValue().set("token:" + user.getId(), token, 24, TimeUnit.HOURS);
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
@@ -62,27 +62,18 @@ public class AuthService {
     }
 
     public Map<String, Object> register(RegisterDTO registerDTO) {
-        // 检查用户名是否已存在
         Long count = userMapper.selectCount(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getUsername, registerDTO.getUsername())
-        );
-        if (count > 0) {
-            throw new BusinessException("用户名已存在");
-        }
+                new LambdaQueryWrapper<User>().eq(User::getUsername, registerDTO.getUsername()));
+        if (count > 0) throw new BusinessException("用户名已存在");
 
         User user = User.builder()
                 .username(registerDTO.getUsername())
                 .password(DigestUtils.md5DigestAsHex(registerDTO.getPassword().getBytes(StandardCharsets.UTF_8)))
-                .email(registerDTO.getEmail())
-                .phone(registerDTO.getPhone())
+                .email(registerDTO.getEmail()).phone(registerDTO.getPhone())
                 .nickname(registerDTO.getNickname() != null ? registerDTO.getNickname() : registerDTO.getUsername())
-                .status(1)
-                .role("USER")
-                .build();
+                .status(1).role("USER").build();
 
         userMapper.insert(user);
-
         String token = JwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
 
         Map<String, Object> result = new HashMap<>();
@@ -97,7 +88,7 @@ public class AuthService {
     }
 
     public void logout(Long userId) {
-        redisTemplate.delete("token:" + userId);
+        if (hasRedis()) redisTemplate.delete("token:" + userId);
         log.info("用户 {} 已登出", userId);
     }
 }

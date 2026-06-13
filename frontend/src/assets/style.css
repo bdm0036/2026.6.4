@@ -6,9 +6,44 @@
 
 body {
   font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1a1a2e;
-  background: #f5f7fa;
+  color: var(--text-primary);
+  background: var(--bg-primary);
   -webkit-font-smoothing: antialiased;
+}
+
+/* ========== 色彩系统 ========== */
+:root {
+  --bg-primary: #f5f7fa;
+  --bg-card: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.92);
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a5a7a;
+  --text-muted: #8c8ca1;
+  --border-color: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 8px rgba(0, 0, 0, 0.03);
+  --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.1);
+  --gradient-hero: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  --accent: #4f46e5;
+  --accent-soft: rgba(79, 70, 229, 0.06);
+  --accent-light: rgba(79, 70, 229, 0.15);
+}
+
+html.dark {
+  --bg-primary: #0f0f1a;
+  --bg-card: #1a1a2e;
+  --bg-header: rgba(26, 26, 46, 0.92);
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6a6a80;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-light: rgba(255, 255, 255, 0.04);
+  --shadow-card: 0 1px 8px rgba(0, 0, 0, 0.2);
+  --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --gradient-hero: linear-gradient(135deg, #0a0a16 0%, #0d0d24 50%, #0a1630 100%);
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.08);
+  --accent-light: rgba(99, 102, 241, 0.18);
 }
 
 a {

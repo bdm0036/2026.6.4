@@ -54,6 +54,42 @@ export const favoriteAPI = {
   list: (params) => request.get('/product/favorites', { params }),
 }
 
+// 地址API
+export const addressAPI = {
+  list: () => request.get('/user/addresses'),
+  getById: (id) => request.get(`/user/addresses/${id}`),
+  add: (data) => request.post('/user/addresses', data),
+  update: (id, data) => request.put(`/user/addresses/${id}`, data),
+  delete: (id) => request.delete(`/user/addresses/${id}`),
+}
+
+// 浏览历史API
+export const historyAPI = {
+  list: (params) => request.get('/user/history', { params }),
+  record: (bookId) => request.post(`/user/history/${bookId}`),
+  clear: () => request.delete('/user/history'),
+}
+
+// 优惠券API
+export const couponAPI = {
+  list: () => request.get('/coupon/available'),
+  myList: () => request.get('/coupon/my'),
+  claim: (couponId) => request.post(`/coupon/${couponId}/claim`),
+}
+
+// 支付API
+export const paymentAPI = {
+  pay: (orderId) => request.post(`/pay/${orderId}`),
+  getByOrder: (orderId) => request.get(`/pay/order/${orderId}`),
+}
+
+// 物流API
+export const shipmentAPI = {
+  ship: (orderId, company = '顺丰速运', trackingNo) => request.post(`/order/${orderId}/ship`, null, { params: { company, trackingNo: trackingNo || 'SF' + Date.now() } }),
+  getByOrder: (orderId) => request.get(`/order/${orderId}/shipment`),
+  getTracking: (orderId) => request.get(`/order/${orderId}/tracking`),
+}
+
 // 订单API
 export const orderAPI = {
   create: (data) => request.post('/order', data),
